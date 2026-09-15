@@ -1,0 +1,18 @@
+name: Run mobile transition patch
+on: [push]
+permissions:
+  contents: write
+jobs:
+  update:
+    if: github.event.head_commit.message == 'Run temporary mobile transition patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python mobile-transition-patch.py
+      - run: |
+          git config user.name dennis-glaser-coder
+          git config user.email dennis-glaser@gmx.de
+          git add index.html
+          git rm mobile-transition-patch.py
+          git commit -m 'Tighten mobile gallery to contact transition'
+          git push
