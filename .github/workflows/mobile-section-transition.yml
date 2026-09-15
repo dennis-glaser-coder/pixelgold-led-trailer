@@ -1,0 +1,24 @@
+name: Mobile section transition updater
+on: [push]
+permissions:
+  contents: write
+jobs:
+  update:
+    if: github.event.head_commit.message == 'Add temporary mobile section transition updater'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('.gallery-copy{padding:58px 18px 68px}.gallery-copy h2{font-size:56px}', '.gallery-copy{padding:58px 18px 30px}.gallery-copy h2{font-size:56px}.gallery-copy .text-link{display:none}')
+          s=s.replace('.contact-grid{grid-template-columns:1fr;gap:46px}.contact h2{font-size:59px}', '.contact{padding-top:42px}.contact-grid{grid-template-columns:1fr;gap:30px}.contact h2{font-size:52px}')
+          p.write_text(s,encoding='utf-8')
+          PY
+          git config user.name dennis-glaser-coder
+          git config user.email dennis-glaser@gmx.de
+          git add index.html
+          git commit -m 'Tighten mobile project to contact transition'
+          git push
