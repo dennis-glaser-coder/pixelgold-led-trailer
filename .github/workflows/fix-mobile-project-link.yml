@@ -1,0 +1,26 @@
+name: Fix mobile project link
+on: [push]
+permissions:
+  contents: write
+jobs:
+  update:
+    if: github.event.head_commit.message == 'Add temporary mobile project link fix'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old='class="text-linkt" href="#kontakt">Einsatz besprechen</a>'
+          new='class="text-link" href="#kontakt">Einsatz besprechen</a>'
+          if old not in s:
+              raise SystemExit('link marker not found')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+          git config user.name dennis-glaser-coder
+          git config user.email dennis-glaser@gmx.de
+          git add index.html
+          git commit -m 'Fix mobile project link class'
+          git push
