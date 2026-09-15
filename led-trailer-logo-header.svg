@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 240" role="img" aria-labelledby="title desc">
+  <title id="title">LED-Trailer.com</title>
+  <desc id="desc">LED-Trailer Logo für dunkle Hintergründe</desc>
+  <defs>
+    <pattern id="ledDots" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="8" cy="8" r="5.4" fill="#f4b323"/>
+    </pattern>
+    <clipPath id="screenClip">
+      <polygon points="28,40 250,28 250,137 28,143"/>
+    </clipPath>
+  </defs>
+
+  <g aria-hidden="true">
+    <polygon points="28,40 250,28 250,137 28,143" fill="#0d1215" stroke="#fff" stroke-width="4"/>
+    <polygon points="250,28 263,34 263,143 250,137" fill="#151c20" stroke="#fff" stroke-width="3"/>
+    <rect x="32" y="35" width="215" height="108" fill="url(#ledDots)" clip-path="url(#screenClip)"/>
+    <path d="M22 151 H250 L283 164 H307" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="square" stroke-linejoin="round"/>
+    <path d="M22 151 V181 H278" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
+    <rect x="29" y="160" width="17" height="8" fill="#f4b323"/>
+    <path d="M274 164 L305 164 L323 172" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="322" cy="172" r="4" fill="#fff"/>
+    <circle cx="93" cy="180" r="24" fill="#0b1013" stroke="#fff" stroke-width="5"/>
+    <circle cx="93" cy="180" r="9" fill="none" stroke="#aeb5b8" stroke-width="4"/>
+    <circle cx="154" cy="180" r="24" fill="#0b1013" stroke="#fff" stroke-width="5"/>
+    <circle cx="154" cy="180" r="9" fill="none" stroke="#aeb5b8" stroke-width="4"/>
+    <path d="M249 178 V201 M239 201 H260" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    <path d="M30 203 H283" stroke="#f4b323" stroke-width="3" opacity=".7"/>
+  </g>
+
+  <g aria-hidden="true" font-family="Arial Black, Arial, sans-serif" font-weight="900" fill="#fff">
+    <text x="340" y="112" font-size="112" letter-spacing="-5">L</text>
+    <text x="410" y="112" font-size="112" letter-spacing="-5">E</text>
+    <text x="484" y="112" font-size="112" letter-spacing="-5">D-</text>
+    <rect x="421" y="67" width="58" height="14" fill="#f4b323"/>
+    <text x="340" y="190" font-size="72" letter-spacing="-3">TRAILER.COM</text>
+  </g>
+</svg>
