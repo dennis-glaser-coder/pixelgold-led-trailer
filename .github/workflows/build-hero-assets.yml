@@ -1,0 +1,36 @@
+name: Build hero assets
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create responsive hero assets
+        run: |
+          python -m pip install pillow
+          python - <<'PY'
+          from PIL import Image, ImageOps
+          from pathlib import Path
+          src = ImageOps.exif_transpose(Image.open('Trailerbild 1.png')).convert('RGB')
+          for name, width, quality in [
+              ('Trailerbild-hero-960.webp', 960, 82),
+              ('Trailerbild-hero-1600.webp', 1600, 84),
+          ]:
+              im = src.copy()
+              if im.width > width:
+                  h = round(im.height * width / im.width)
+                  im = im.resize((width, h), Image.Resampling.LANCZOS)
+              im.save(name, 'WEBP', quality=quality, method=6)
+              print(name, im.size, Path(name).stat().st_size)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hero-assets
+          path: |
+            Trailerbild-hero-960.webp
+            Trailerbild-hero-1600.webp
+          retention-days: 1
