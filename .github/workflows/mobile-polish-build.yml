@@ -1,0 +1,51 @@
+name: Mobile polish builder
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    if: github.event.head_commit.message == 'Add temporary mobile polish builder'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply mobile polish to copy
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+
+          old='''@media(max-width:820px){html{scroll-padding-top:76px}.wrap{width:calc(100% - 36px)}.head{height:76px}.brand{font-size:25px}.menu{display:block}.nav{display:none;position:absolute;top:76px;left:0;right:0;background:#080b0d;padding:22px 18px 28px;flex-direction:column;align-items:stretch;border-top:1px solid rgba(255,255,255,.15)}'''
+          new='''@media(max-width:820px){html{scroll-padding-top:76px}.wrap{width:auto;margin-left:max(18px,env(safe-area-inset-left));margin-right:max(18px,env(safe-area-inset-right))}.head{height:76px;gap:24px}.brand{font-size:25px}.menu{display:block;min-height:44px;min-width:68px}.nav{display:none;position:absolute;top:76px;left:0;right:0;z-index:35;background:#080b0d;padding:22px max(18px,env(safe-area-inset-right)) 28px max(18px,env(safe-area-inset-left));flex-direction:column;align-items:stretch;border-top:1px solid rgba(255,255,255,.15);box-shadow:0 14px 30px rgba(0,0,0,.22)}'''
+          if old not in s: raise SystemExit('mobile media marker not found')
+          s=s.replace(old,new,1)
+
+          old='''.mobile-cta{display:flex;position:fixed;left:12px;right:12px;bottom:12px;z-index:40;box-shadow:0 8px 24px rgba(0,0,0,.28);opacity:0;visibility:hidden;transform:translateY(12px);pointer-events:none}.mobile-cta.is-visible{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto}footer{padding-bottom:92px}}'''
+          new='''.mobile-cta{display:flex;position:fixed;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:40;box-shadow:0 8px 24px rgba(0,0,0,.28);opacity:0;visibility:hidden;transform:translateY(14px);pointer-events:none;transition:opacity .22s ease,transform .22s ease,visibility .22s ease;will-change:opacity,transform}.mobile-cta.is-visible{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto}body.menu-open{overflow:hidden}footer{padding-bottom:calc(92px + env(safe-area-inset-bottom))}}'''
+          if old not in s: raise SystemExit('cta marker not found')
+          s=s.replace(old,new,1)
+
+          old='''@media(max-width:520px){.hero{min-height:680px}.hero-inner{padding-top:132px}'''
+          new='''@media(max-width:520px){.hero{min-height:680px}.hero-inner{padding-top:132px}'''
+          if old not in s: raise SystemExit('520 marker not found')
+
+          insert='''\n@media(max-width:390px){.head{gap:18px}.brand{font-size:24px}.hero-lead{font-size:17px}.menu{padding:9px 12px}}'''
+          marker='''@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.button,.product-summary,.chevron,.product-details,.product-detail-content,.whatsapp-button,.use-card,.use-card:before,.use-icon{transition:none}}'''
+          replacement='''@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.button,.product-summary,.chevron,.product-details,.product-detail-content,.whatsapp-button,.use-card,.use-card:before,.use-icon,.mobile-cta{transition:none}}'''
+          if marker not in s: raise SystemExit('reduced motion marker not found')
+          s=s.replace(marker,insert+'\n'+replacement,1)
+
+          old="""const menu=document.querySelector('.menu'),nav=document.querySelector('.nav');function closeMenu(){menu.setAttribute('aria-expanded','false');nav.classList.remove('open')}menu.addEventListener('click',()=>{const open=menu.getAttribute('aria-expanded')!=='true';menu.setAttribute('aria-expanded',String(open));nav.classList.toggle('open',open)});nav.addEventListener('click',e=>{if(e.target.closest('a'))closeMenu()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&nav.classList.contains('open')){closeMenu();menu.focus()}});"""
+          new="""const menu=document.querySelector('.menu'),nav=document.querySelector('.nav'),siteHeader=document.querySelector('header');function closeMenu(focusMenu=false){menu.setAttribute('aria-expanded','false');menu.setAttribute('aria-label','Menü öffnen');nav.classList.remove('open');document.body.classList.remove('menu-open');if(focusMenu)menu.focus()}menu.setAttribute('aria-label','Menü öffnen');menu.addEventListener('click',()=>{const open=menu.getAttribute('aria-expanded')!=='true';menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'Menü schließen':'Menü öffnen');nav.classList.toggle('open',open);document.body.classList.toggle('menu-open',open)});nav.addEventListener('click',e=>{if(e.target.closest('a'))closeMenu()});document.addEventListener('pointerdown',e=>{if(nav.classList.contains('open')&&siteHeader&&!siteHeader.contains(e.target))closeMenu()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&nav.classList.contains('open'))closeMenu(true)});window.addEventListener('resize',()=>{if(window.innerWidth>820&&nav.classList.contains('open'))closeMenu()},{passive:true});"""
+          if old not in s: raise SystemExit('menu JS marker not found')
+          s=s.replace(old,new,1)
+
+          p.write_text(s,encoding='utf-8')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-polish-index
+          path: index.html
+          retention-days: 1
