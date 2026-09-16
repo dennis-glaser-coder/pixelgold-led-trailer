@@ -1,0 +1,32 @@
+name: Mobile screen spacing
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Optimize mobile LED screen spacing'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Optimize mobile screen spacing
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = '.visual-wrap{grid-column:1/-1;display:grid;grid-template-columns:1fr;gap:18px;margin-top:18px}.screen-stage{display:flex;width:100%;height:168px;justify-content:center;overflow:visible}.product-data{gap:24px}'
+          new = '.visual-wrap{grid-column:1/-1;display:grid;grid-template-columns:1fr;gap:12px;margin-top:14px}.screen-stage{display:flex;width:100%;justify-content:center;align-items:flex-start;overflow:visible}.product[data-size="7 m²"] .screen-stage{height:88px}.product[data-size="11,25 m²"] .screen-stage{height:96px}.product[data-size="15 m²"] .screen-stage{height:104px}.product[data-size="21 m²"] .screen-stage{height:112px}.product[data-size="28 m²"] .screen-stage{height:122px}.product[data-size="91 m²"] .screen-stage{height:138px}.product[data-size="117 m²"] .screen-stage{height:162px}.product[data-size="144 m²"] .screen-stage{height:162px}.product[data-size="7 m²"] .screen-box{transform:scale(1.45);transform-origin:center top}.product[data-size="11,25 m²"] .screen-box{transform:scale(1.28);transform-origin:center top}.product[data-size="15 m²"] .screen-box{transform:scale(1.18);transform-origin:center top}.product[data-size="21 m²"] .screen-box{transform:scale(1.10);transform-origin:center top}.product-data{gap:24px}'
+          if old not in s:
+              raise SystemExit('Target mobile screen CSS not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Optimize mobile LED screen spacing"
+          git push
