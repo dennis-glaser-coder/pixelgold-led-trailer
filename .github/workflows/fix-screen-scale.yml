@@ -1,0 +1,57 @@
+name: Fix LED screen scale
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-screen-scale.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix-scale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Correct 144 m2 screen proportions
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('index.html')
+          s = path.read_text(encoding='utf-8')
+
+          replacements = [
+              (
+                  '.screen-stage{width:250px;height:170px;',
+                  '.screen-stage{width:270px;height:170px;'
+              ),
+              (
+                  '.v117{width:206px;aspect-ratio:13/9}.v144{width:218px;aspect-ratio:16/9}',
+                  '.v117{width:206px;aspect-ratio:13/9}.v144{width:254px;aspect-ratio:16/9}'
+              ),
+              (
+                  '.screen-stage{width:200px}.screen-box.v91,.screen-box.v117,.screen-box.v144{max-width:176px}',
+                  '.screen-stage{width:220px}.screen-box.v91,.screen-box.v117{max-width:176px}.screen-box.v144{max-width:217px}'
+              ),
+          ]
+
+          for old, new in replacements:
+              if old not in s:
+                  raise SystemExit(f'Expected CSS fragment not found: {old}')
+              s = s.replace(old, new, 1)
+
+          path.write_text(s, encoding='utf-8')
+
+          # This workflow is only needed for this one-time patch.
+          Path('.github/workflows/fix-screen-scale.yml').unlink()
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html .github/workflows/fix-screen-scale.yml
+          git commit -m "Fix proportional scale of 144 m2 LED trailer"
+          git push
