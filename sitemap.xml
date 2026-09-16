@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://led-trailer.com/</loc>
-    <lastmod>2026-09-15</lastmod>
-  </url>
+  <url><loc>https://led-trailer.com/</loc><lastmod>2026-09-16</lastmod></url>
+  <url><loc>https://led-trailer.com/led-trailer/</loc><lastmod>2026-09-16</lastmod></url>
+  <url><loc>https://led-trailer.com/einsatzbereiche/</loc><lastmod>2026-09-16</lastmod></url>
+  <url><loc>https://led-trailer.com/einsatzbereiche/public-viewing/</loc><lastmod>2026-09-16</lastmod></url>
+  <url><loc>https://led-trailer.com/einsatzbereiche/sportveranstaltungen/</loc><lastmod>2026-09-16</lastmod></url>
+  <url><loc>https://led-trailer.com/einsatzbereiche/reitsport/</loc><lastmod>2026-09-16</lastmod></url>
+  <url><loc>https://led-trailer.com/einsatzbereiche/firmenveranstaltungen/</loc><lastmod>2026-09-16</lastmod></url>
+  <url><loc>https://led-trailer.com/ratgeber/</loc><lastmod>2026-09-16</lastmod></url>
+  <url><loc>https://led-trailer.com/ratgeber/welche-led-trailer-groesse/</loc><lastmod>2026-09-16</lastmod></url>
+  <url><loc>https://led-trailer.com/ratgeber/led-trailer-kosten/</loc><lastmod>2026-09-16</lastmod></url>
+  <url><loc>https://led-trailer.com/ratgeber/led-trailer-planen/</loc><lastmod>2026-09-16</lastmod></url>
+  <url><loc>https://led-trailer.com/ratgeber/led-trailer-oder-led-wand/</loc><lastmod>2026-09-16</lastmod></url>
 </urlset>
