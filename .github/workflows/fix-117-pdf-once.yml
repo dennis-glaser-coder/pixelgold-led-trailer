@@ -1,0 +1,112 @@
+name: Replace 117 m2 PDF once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-117-pdf-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  replace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PDF dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-roboto
+          python -m pip install --quiet reportlab
+      - name: Generate final 117 m2 PDF
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from reportlab.pdfgen import canvas
+          from reportlab.lib.pagesizes import A4
+          from reportlab.lib.colors import HexColor
+          from reportlab.pdfbase import pdfmetrics
+          from reportlab.pdfbase.ttfonts import TTFont
+          from reportlab.lib.units import mm
+
+          out=Path('downloads/LED-Trailer_Datenblatt_117m2.pdf')
+          out.parent.mkdir(parents=True, exist_ok=True)
+
+          regular='/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf'
+          bold='/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf'
+          cond_candidates=['/usr/share/fonts/truetype/roboto/unhinted/RobotoCondensed-Regular.ttf','/usr/share/fonts/truetype/roboto/RobotoCondensed-Regular.ttf']
+          cond=next((p for p in cond_candidates if Path(p).exists()),None)
+          if not Path(regular).exists() or not Path(bold).exists() or not cond:
+              raise SystemExit('Required fonts missing')
+          pdfmetrics.registerFont(TTFont('Sans',regular))
+          pdfmetrics.registerFont(TTFont('SansMed',regular))
+          pdfmetrics.registerFont(TTFont('SansBold',bold))
+          pdfmetrics.registerFont(TTFont('Cond',cond))
+
+          W,H=A4
+          BLACK=HexColor('#090B0C'); DARK=HexColor('#131719'); TEXT=HexColor('#15191B'); MUTED=HexColor('#6B7377')
+          LIGHT=HexColor('#F2F3F1'); WHITE=HexColor('#FFFFFF'); LINE=HexColor('#D7DBDC'); YELLOW=HexColor('#F7CA02')
+          M=16*mm; CONTENT_W=W-2*M
+          def t(c,x,y,s,font='Sans',size=9,color=TEXT): c.setFillColor(color); c.setFont(font,size); c.drawString(x,y,s)
+          def tr(c,x,y,s,font='Sans',size=9,color=TEXT): c.setFillColor(color); c.setFont(font,size); c.drawRightString(x,y,s)
+          def tc(c,x,y,s,font='Sans',size=9,color=TEXT): c.setFillColor(color); c.setFont(font,size); c.drawCentredString(x,y,s)
+          def hline(c,x1,y,x2,color=LINE,width=.6): c.setStrokeColor(color); c.setLineWidth(width); c.line(x1,y,x2,y)
+          def section_title(c,x,y,title): c.setFillColor(YELLOW); c.rect(x,y-2,18,2.2,fill=1,stroke=0); t(c,x+24,y-4,title.upper(),'SansBold',8.4,TEXT)
+          def spec_row(c,x,y,w,label,value,label_w=52*mm,row_h=9.4*mm):
+              hline(c,x,y,x+w,LINE,.5); t(c,x,y-row_h+3.2*mm,label.upper(),'SansMed',6.7,MUTED); t(c,x+label_w,y-row_h+3.0*mm,value,'SansMed',9.1,TEXT); return y-row_h
+          def footer(c,n):
+              hline(c,M,14*mm,W-M,LINE,.5); t(c,M,8.5*mm,'LED-Trailer.com','SansBold',7.2,TEXT); tc(c,W/2,8.5*mm,'Technisches Datenblatt · 117 m²','Sans',7,MUTED); tr(c,W-M,8.5*mm,f'{n}/2','Sans',7,MUTED)
+          def dim_h(c,x1,x2,y,label):
+              c.setStrokeColor(MUTED); c.setLineWidth(.65); c.line(x1,y,x2,y); a=3
+              c.line(x1,y,x1+a,y+a/1.7); c.line(x1,y,x1+a,y-a/1.7); c.line(x2,y,x2-a,y+a/1.7); c.line(x2,y,x2-a,y-a/1.7); tc(c,(x1+x2)/2,y+4.0,label,'SansMed',7.5,MUTED)
+          def dim_v(c,x,y1,y2,label):
+              c.setStrokeColor(MUTED); c.setLineWidth(.65); c.line(x,y1,x,y2); a=3
+              c.line(x,y1,x+a/1.7,y1+a); c.line(x,y1,x-a/1.7,y1+a); c.line(x,y2,x+a/1.7,y2-a); c.line(x,y2,x-a/1.7,y2-a)
+              c.saveState(); c.translate(x+7,(y1+y2)/2); c.rotate(90); tc(c,0,0,label,'SansMed',7.5,MUTED); c.restoreState()
+
+          c=canvas.Canvas(str(out),pagesize=A4)
+          c.setFillColor(WHITE); c.rect(0,0,W,H,fill=1,stroke=0)
+          c.setFillColor(BLACK); c.rect(0,H-24*mm,W,24*mm,fill=1,stroke=0)
+          t(c,M,H-15.5*mm,'LED-TRAILER.COM','Cond',17,WHITE); tr(c,W-M,H-15.2*mm,'TECHNISCHES DATENBLATT','SansBold',7.5,YELLOW)
+          hero_top=H-24*mm; hero_h=55*mm
+          c.setFillColor(DARK); c.rect(0,hero_top-hero_h,W,hero_h,fill=1,stroke=0)
+          t(c,M,hero_top-13*mm,'MOBILER LED-TRAILER','SansBold',8,YELLOW); t(c,M,hero_top-33*mm,'117 m²','SansBold',36,WHITE); t(c,M,hero_top-45*mm,'13,00 x 9,00 m Bildfläche','SansMed',12.5,WHITE)
+          rx=W-64*mm
+          t(c,rx,hero_top-15*mm,'PIXELPITCH','SansBold',6.5,HexColor('#AAB0B2')); t(c,rx,hero_top-23*mm,'P4 / 4,8 mm','SansMed',11.5,WHITE)
+          t(c,rx,hero_top-34*mm,'AUFLÖSUNG','SansBold',6.5,HexColor('#AAB0B2')); t(c,rx,hero_top-42*mm,'2.704 x 1.872 Pixel','SansMed',11.5,WHITE)
+          y=hero_top-hero_h-13*mm; section_title(c,M,y,'LED-Bildfläche'); y-=8*mm
+          for a,b in [('Bildfläche','117 m²'),('Bildmaß','13,00 x 9,00 m'),('Pixelpitch','P4 / 4,8 mm'),('Auflösung','2.704 x 1.872 Pixel · 5.061.888 Pixel gesamt'),('Helligkeit','3.800 cd/m²'),('Betrachtungswinkel','140°')]: y=spec_row(c,M,y,CONTENT_W,a,b)
+          y-=9*mm; section_title(c,M,y,'Mechanik & Abmessungen'); y-=8*mm
+          for a,b in [('Drehbereich','360° drehbar'),('Oberkante Bildfläche','variabel von 10,50 bis 13,02 m'),('Unterkante Bildfläche','variabel von 1,70 bis 4,20 m'),('Grundfläche','ca. 13,8 x 6,3 m'),('Aufbaubereich um Mast','ca. Ø 13,50 m'),('Transportgewicht','33.500 kg')]: y=spec_row(c,M,y,CONTENT_W,a,b)
+          y-=9*mm; section_title(c,M,y,'Betrieb'); y-=8*mm
+          for a,b in [('Aufbauzeit','60-90 Minuten'),('Abbauzeit','ca. 60 Minuten'),('Stromversorgung','125 A / 400 V / 3 Ph + N + PE  ·  32 A / 400 V / 3 Ph + N + PE')]: y=spec_row(c,M,y,CONTENT_W,a,b,row_h=9.5*mm)
+          footer(c,1); c.showPage()
+
+          c.setFillColor(WHITE); c.rect(0,0,W,H,fill=1,stroke=0)
+          c.setFillColor(BLACK); c.rect(0,H-24*mm,W,24*mm,fill=1,stroke=0)
+          t(c,M,H-15.5*mm,'LED-TRAILER.COM','Cond',17,WHITE); tr(c,W-M,H-15.2*mm,'ABMESSUNGEN & PLANUNG','SansBold',7.5,YELLOW)
+          t(c,M,H-44*mm,'Abmessungen & Planung','Cond',25,TEXT); t(c,M,H-55*mm,'Technische Eckdaten für Aufbau, Positionierung und Versorgung.','Sans',9.4,MUTED)
+          top=H-72*mm; panel_h=68*mm; panel_bottom=top-panel_h
+          c.setStrokeColor(LINE); c.setLineWidth(.7); c.rect(M,panel_bottom,CONTENT_W,panel_h,fill=0,stroke=1); t(c,M+7*mm,top-9*mm,'BILDFLÄCHE / VORDERANSICHT','SansBold',7.3,MUTED)
+          cx=W/2; screen_w=74*mm; screen_h=screen_w*(9/13); sx=cx-screen_w/2; sy=panel_bottom+8*mm
+          c.setStrokeColor(TEXT); c.setLineWidth(1.2); c.rect(sx,sy,screen_w,screen_h,fill=0,stroke=1)
+          dim_h(c,sx,sx+screen_w,sy+screen_h+4.5*mm,'13,00 m'); dim_v(c,sx+screen_w+8*mm,sy,sy+screen_h,'9,00 m')
+          y2=panel_bottom-14*mm; section_title(c,M,y2,'Planungsdaten'); y2-=8*mm
+          for a,b in [('Grundfläche','ca. 13,8 x 6,3 m'),('Aufbaubereich um Mast','ca. Ø 13,50 m'),('Drehbereich','360° drehbar'),('Oberkante Bildfläche','variabel von 10,50 bis 13,02 m'),('Unterkante Bildfläche','variabel von 1,70 bis 4,20 m'),('Transportgewicht','33.500 kg'),('Aufbauzeit','60-90 Minuten'),('Abbauzeit','ca. 60 Minuten')]: y2=spec_row(c,M,y2,CONTENT_W,a,b,row_h=8.3*mm)
+          section_title(c,M,51*mm,'Stromversorgung'); block_y=27*mm; block_h=25*mm
+          c.setFillColor(LIGHT); c.rect(M,block_y,CONTENT_W,block_h,fill=1,stroke=0); half=CONTENT_W/2
+          t(c,M+7*mm,block_y+17*mm,'ANSCHLUSS 1','SansBold',6.7,MUTED); t(c,M+7*mm,block_y+8.5*mm,'125 A / 400 V','SansBold',12.2,TEXT); t(c,M+7*mm,block_y+3.5*mm,'3 Ph + N + PE','Sans',7.4,MUTED)
+          c.setStrokeColor(LINE); c.setLineWidth(.6); c.line(M+half,block_y+5*mm,M+half,block_y+20*mm)
+          t(c,M+half+7*mm,block_y+17*mm,'ANSCHLUSS 2','SansBold',6.7,MUTED); t(c,M+half+7*mm,block_y+8.5*mm,'32 A / 400 V','SansBold',12.2,TEXT); t(c,M+half+7*mm,block_y+3.5*mm,'3 Ph + N + PE','Sans',7.4,MUTED)
+          t(c,M,20.5*mm,'Hinweis: Prinzipdarstellung, nicht maßstabsgetreu. Detaillierte technische Zeichnungen auf Anfrage.','Sans',7.0,MUTED)
+          footer(c,2); c.save()
+          PY
+      - name: Commit PDF replacement and remove workflow
+        run: |
+          test -s downloads/LED-Trailer_Datenblatt_117m2.pdf
+          rm .github/workflows/fix-117-pdf-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add downloads/LED-Trailer_Datenblatt_117m2.pdf .github/workflows/fix-117-pdf-once.yml
+          git commit -m "Replace 117 m² datasheet PDF"
+          git push
