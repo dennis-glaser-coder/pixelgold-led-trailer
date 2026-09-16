@@ -1,32 +1,10 @@
-name: Refine LED trailer wheels
+name: Trailer wheel style
+
 on:
-  push:
-    branches: [main]
-permissions:
-  contents: write
+  workflow_dispatch:
+
 jobs:
-  patch:
-    if: github.actor != 'github-actions[bot]'
+  noop:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Refine wheels
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('index.html')
-          s = p.read_text(encoding='utf-8')
-          old = '.screen-box:before{content:"";position:absolute;left:-8px;right:-28px;bottom:-13px;height:16px;border-top:3px solid #111619;background:radial-gradient(circle at 34% 8px,#f7f7f5 0 3px,#111619 3.5px 7px,transparent 7.5px),radial-gradient(circle at 51% 8px,#f7f7f5 0 3px,#111619 3.5px 7px,transparent 7.5px)}'
-          new = '.screen-box:before{content:"";position:absolute;left:-8px;right:-28px;bottom:-14px;height:18px;border-top:3px solid #111619;background:radial-gradient(circle 7px at calc(50% - 24px) 10px,#f7f7f5 0 2px,#111619 2.5px 7px,transparent 7.5px),radial-gradient(circle 7px at calc(50% + 24px) 10px,#f7f7f5 0 2px,#111619 2.5px 7px,transparent 7.5px)}'
-          if old not in s:
-              raise SystemExit('Target wheel CSS not found')
-          p.write_text(s.replace(old, new, 1), encoding='utf-8')
-          PY
-      - name: Commit change
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git diff --cached --quiet && exit 0
-          git commit -m "Refine LED trailer wheels"
-          git push
+      - run: echo "Wheel style is maintained directly in index.html."
