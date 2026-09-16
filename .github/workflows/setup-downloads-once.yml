@@ -1,0 +1,158 @@
+name: Setup LED Trailer downloads once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/setup-downloads-once.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install PDF dependency
+        run: |
+          python -m pip install --quiet reportlab
+      - name: Create final PDF, downloads page and homepage links
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          from reportlab.pdfgen import canvas
+          from reportlab.lib.pagesizes import A4
+          from reportlab.lib.colors import HexColor, white
+          from reportlab.pdfbase import pdfmetrics
+          from reportlab.pdfbase.ttfonts import TTFont
+          from reportlab.lib.units import mm
+          import os
+
+          root = Path('.')
+          dldir = root / 'downloads'
+          dldir.mkdir(exist_ok=True)
+          pdf_path = dldir / 'LED-Trailer_Datenblatt_144m2.pdf'
+
+          def pick(paths):
+              for p in paths:
+                  if os.path.exists(p): return p
+              return None
+
+          font_candidates = {
+              'Sans': ['/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf','/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'],
+              'SansMed': ['/usr/share/fonts/truetype/noto/NotoSans-Medium.ttf','/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'],
+              'SansBold': ['/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf','/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'],
+              'Cond': ['/usr/share/fonts/truetype/roboto/unhinted/RobotoCondensed-Regular.ttf','/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf'],
+          }
+          for name, paths in font_candidates.items():
+              p = pick(paths)
+              if p:
+                  pdfmetrics.registerFont(TTFont(name,p))
+          # Fallbacks if a runner image differs
+          names = set(pdfmetrics.getRegisteredFontNames())
+          if 'Sans' not in names: pdfmetrics.registerFont(TTFont('Sans', pick(font_candidates['Sans'])))
+          if 'SansMed' not in names: pdfmetrics.registerFont(TTFont('SansMed', pick(font_candidates['SansMed'])))
+          if 'SansBold' not in names: pdfmetrics.registerFont(TTFont('SansBold', pick(font_candidates['SansBold'])))
+          if 'Cond' not in names: pdfmetrics.registerFont(TTFont('Cond', pick(font_candidates['Cond'])))
+
+          W,H=A4
+          BLACK=HexColor('#090B0C'); DARK=HexColor('#131719'); TEXT=HexColor('#15191B')
+          MUTED=HexColor('#6B7377'); LIGHT=HexColor('#F2F3F1'); WHITE=HexColor('#FFFFFF')
+          LINE=HexColor('#D7DBDC'); YELLOW=HexColor('#F7CA02'); SOFT=HexColor('#E7E9E8')
+          M=16*mm; CONTENT_W=W-2*M
+
+          def t(c,x,y,s,font='Sans',size=9,color=TEXT): c.setFillColor(color); c.setFont(font,size); c.drawString(x,y,s)
+          def tr(c,x,y,s,font='Sans',size=9,color=TEXT): c.setFillColor(color); c.setFont(font,size); c.drawRightString(x,y,s)
+          def tc(c,x,y,s,font='Sans',size=9,color=TEXT): c.setFillColor(color); c.setFont(font,size); c.drawCentredString(x,y,s)
+          def hline(c,x1,y,x2,color=LINE,width=.6): c.setStrokeColor(color); c.setLineWidth(width); c.line(x1,y,x2,y)
+          def section_title(c,x,y,title):
+              c.setFillColor(YELLOW); c.rect(x,y-2,18,2.2,fill=1,stroke=0); t(c,x+24,y-4,title.upper(),'SansBold',8.4,TEXT)
+          def spec_row(c,x,y,w,label,value,label_w=52*mm,row_h=9.4*mm):
+              hline(c,x,y,x+w,LINE,.5); t(c,x,y-row_h+3.2*mm,label.upper(),'SansMed',6.7,MUTED); t(c,x+label_w,y-row_h+3.0*mm,value,'SansMed',9.1,TEXT); return y-row_h
+          def footer(c,n):
+              hline(c,M,14*mm,W-M,LINE,.5); t(c,M,8.5*mm,'LED-Trailer.com','SansBold',7.2,TEXT); tc(c,W/2,8.5*mm,'Technisches Datenblatt · 144 m²','Sans',7,MUTED); tr(c,W-M,8.5*mm,f'{n}/2','Sans',7,MUTED)
+          def dim_h(c,x1,x2,y,label):
+              c.setStrokeColor(MUTED); c.setLineWidth(.65); c.line(x1,y,x2,y); a=3
+              c.line(x1,y,x1+a,y+a/1.7); c.line(x1,y,x1+a,y-a/1.7); c.line(x2,y,x2-a,y+a/1.7); c.line(x2,y,x2-a,y-a/1.7); tc(c,(x1+x2)/2,y+4.5,label,'SansMed',7.5,MUTED)
+          def dim_v(c,x,y1,y2,label):
+              c.setStrokeColor(MUTED); c.setLineWidth(.65); c.line(x,y1,x,y2); a=3
+              c.line(x,y1,x+a/1.7,y1+a); c.line(x,y1,x-a/1.7,y1+a); c.line(x,y2,x+a/1.7,y2-a); c.line(x,y2,x-a/1.7,y2-a)
+              c.saveState(); c.translate(x+7,(y1+y2)/2); c.rotate(90); tc(c,0,0,label,'SansMed',7.5,MUTED); c.restoreState()
+
+          c=canvas.Canvas(str(pdf_path),pagesize=A4)
+          c.setFillColor(WHITE); c.rect(0,0,W,H,fill=1,stroke=0)
+          c.setFillColor(BLACK); c.rect(0,H-24*mm,W,24*mm,fill=1,stroke=0)
+          t(c,M,H-15.5*mm,'LED-TRAILER.COM','Cond',17,WHITE); tr(c,W-M,H-15.2*mm,'TECHNISCHES DATENBLATT','SansBold',7.5,YELLOW)
+          hero_top=H-24*mm; hero_h=55*mm
+          c.setFillColor(DARK); c.rect(0,hero_top-hero_h,W,hero_h,fill=1,stroke=0)
+          t(c,M,hero_top-13*mm,'MOBILER LED-TRAILER','SansBold',8,YELLOW); t(c,M,hero_top-33*mm,'144 m²','SansBold',36,WHITE); t(c,M,hero_top-45*mm,'16,00 x 9,00 m Bildfläche','SansMed',12.5,WHITE)
+          rx=W-64*mm
+          t(c,rx,hero_top-15*mm,'PIXELPITCH','SansBold',6.5,HexColor('#AAB0B2')); t(c,rx,hero_top-23*mm,'P4 / 4,8 mm','SansMed',11.5,WHITE)
+          t(c,rx,hero_top-34*mm,'AUFLÖSUNG','SansBold',6.5,HexColor('#AAB0B2')); t(c,rx,hero_top-42*mm,'3.328 x 1.872 Pixel','SansMed',11.5,WHITE)
+          y=hero_top-hero_h-13*mm
+          section_title(c,M,y,'LED-Bildfläche'); y-=8*mm
+          for a,b in [('Bildfläche','144 m²'),('Bildmaß','16,00 x 9,00 m'),('Pixelpitch','P4 / 4,8 mm'),('Auflösung','3.328 x 1.872 Pixel · 6.230.016 Pixel gesamt'),('Helligkeit','3.800 cd/m²'),('Betrachtungswinkel','140°')]: y=spec_row(c,M,y,CONTENT_W,a,b)
+          y-=9*mm; section_title(c,M,y,'Mechanik & Abmessungen'); y-=8*mm
+          for a,b in [('Drehbereich','360° drehbar'),('Oberkante Bildfläche','variabel von 10,50 bis 13,02 m'),('Unterkante Bildfläche','variabel von 1,70 bis 4,20 m'),('Grundfläche','ca. 13,8 x 6,3 m'),('Aufbaubereich um Mast','ca. Ø 13,50 m'),('Transportgewicht','33.500 kg')]: y=spec_row(c,M,y,CONTENT_W,a,b)
+          y-=9*mm; section_title(c,M,y,'Betrieb'); y-=8*mm
+          for a,b in [('Aufbauzeit','60-90 Minuten'),('Abbauzeit','ca. 60 Minuten'),('Stromversorgung','125 A / 400 V / 3 Ph + N + PE  ·  32 A / 400 V / 3 Ph + N + PE')]: y=spec_row(c,M,y,CONTENT_W,a,b,row_h=9.5*mm)
+          footer(c,1); c.showPage()
+
+          c.setFillColor(WHITE); c.rect(0,0,W,H,fill=1,stroke=0); c.setFillColor(BLACK); c.rect(0,H-24*mm,W,24*mm,fill=1,stroke=0)
+          t(c,M,H-15.5*mm,'LED-TRAILER.COM','Cond',17,WHITE); tr(c,W-M,H-15.2*mm,'ABMESSUNGEN & PLANUNG','SansBold',7.5,YELLOW)
+          t(c,M,H-44*mm,'Abmessungen & Planung','Cond',25,TEXT); t(c,M,H-55*mm,'Technische Eckdaten für Aufbau, Positionierung und Versorgung.','Sans',9.4,MUTED)
+          top=H-72*mm; panel_h=78*mm
+          c.setStrokeColor(LINE); c.setLineWidth(.7); c.rect(M,top-panel_h,CONTENT_W,panel_h,fill=0,stroke=1); t(c,M+7*mm,top-9*mm,'VORDERANSICHT','SansBold',7.3,MUTED)
+          cx=W/2; screen_w=86*mm; screen_h=screen_w*9/16; sx=cx-screen_w/2; sy=top-18*mm-screen_h; base_y=top-panel_h+9*mm; base_w=74*mm
+          c.setStrokeColor(TEXT); c.setLineWidth(1.15); c.rect(sx,sy,screen_w,screen_h,fill=0,stroke=1)
+          mast_w=4.5*mm; c.setFillColor(SOFT); c.setStrokeColor(TEXT); c.setLineWidth(.9); c.rect(cx-mast_w/2,base_y+7*mm,mast_w,sy-(base_y+7*mm),fill=1,stroke=1); c.rect(cx-base_w/2,base_y,base_w,7*mm,fill=1,stroke=1)
+          dim_h(c,sx,sx+screen_w,sy+screen_h+6*mm,'16,00 m'); dim_v(c,sx+screen_w+8*mm,sy,sy+screen_h,'9,00 m')
+          t(c,M+7*mm,top-panel_h+3.3*mm,'Oberkante Bildfläche: 10,50-13,02 m   ·   Unterkante Bildfläche: 1,70-4,20 m','Sans',7.3,MUTED)
+          y2=top-panel_h-12*mm; section_title(c,M,y2,'Planungsdaten'); y2-=8*mm
+          for a,b in [('Grundfläche','ca. 13,8 x 6,3 m'),('Aufbaubereich um Mast','ca. Ø 13,50 m'),('Drehbereich','360° drehbar'),('Transportgewicht','33.500 kg'),('Aufbauzeit','60-90 Minuten'),('Abbauzeit','ca. 60 Minuten')]: y2=spec_row(c,M,y2,CONTENT_W,a,b,row_h=8.7*mm)
+          power_title_y=69*mm; section_title(c,M,power_title_y,'Stromversorgung'); block_y=35*mm; block_h=25*mm
+          c.setFillColor(LIGHT); c.rect(M,block_y,CONTENT_W,block_h,fill=1,stroke=0); half=CONTENT_W/2
+          t(c,M+7*mm,block_y+17*mm,'ANSCHLUSS 1','SansBold',6.7,MUTED); t(c,M+7*mm,block_y+8.5*mm,'125 A / 400 V','SansBold',12.2,TEXT); t(c,M+7*mm,block_y+3.5*mm,'3 Ph + N + PE','Sans',7.4,MUTED)
+          c.setStrokeColor(LINE); c.setLineWidth(.6); c.line(M+half,block_y+5*mm,M+half,block_y+20*mm)
+          t(c,M+half+7*mm,block_y+17*mm,'ANSCHLUSS 2','SansBold',6.7,MUTED); t(c,M+half+7*mm,block_y+8.5*mm,'32 A / 400 V','SansBold',12.2,TEXT); t(c,M+half+7*mm,block_y+3.5*mm,'3 Ph + N + PE','Sans',7.4,MUTED)
+          t(c,M,20.5*mm,'Hinweis: Prinzipdarstellung, nicht maßstabsgetreu. Detaillierte technische Zeichnungen auf Anfrage.','Sans',7,MUTED); footer(c,2); c.save()
+
+          downloads_html = '''<!doctype html>
+          <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="index,follow"><title>Downloads · LED-Trailer.com</title><meta name="description" content="Technische Datenblätter für mobile LED-Trailer von LED-Trailer.com."><link rel="canonical" href="https://led-trailer.com/downloads.html"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"><style>
+          :root{--black:#080b0d;--ink:#111619;--paper:#f7f7f5;--white:#fff;--muted:#6f787c;--line:#d9dddf;--max:1400px}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Barlow,Arial,sans-serif;line-height:1.55}a{color:inherit;text-decoration:none}.wrap{width:min(var(--max),calc(100% - 96px));margin:auto}header{background:var(--black);color:#fff;border-bottom:1px solid #2b3236}.head{height:82px;display:flex;align-items:center;justify-content:space-between;gap:36px}.brand{font:700 28px/1 'Barlow Condensed';letter-spacing:.04em}.nav{display:flex;align-items:center;gap:30px;font-size:14px}.nav a{color:#d2d7d9}.nav a:hover,.nav a.active{color:#fff}.button{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:13px 21px;background:#111619;color:#fff;font-weight:600;font-size:14px;border:1px solid #111619}.nav .button{background:transparent;border-color:#697176}.hero{background:#111619;color:#fff;padding:96px 0 78px}.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#9ca5a9;margin:0 0 16px}.hero h1{font:600 clamp(62px,7vw,96px)/.92 'Barlow Condensed';margin:0 0 24px}.hero p{max-width:620px;color:#b7c0c4;font-size:18px;margin:0}.downloads{padding:92px 0 120px}.downloads h2{font:600 52px/1 'Barlow Condensed';margin:0 0 38px}.download-row{display:grid;grid-template-columns:190px 1fr auto;gap:42px;align-items:center;padding:30px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.size{font:600 54px/.9 'Barlow Condensed'}.meta strong{display:block;font:600 25px/1.1 'Barlow Condensed';margin-bottom:7px}.meta span{color:var(--muted);font-size:14px}.pdf{white-space:nowrap}.back{display:inline-block;margin-top:38px;border-bottom:1px solid #111619;font-size:14px;font-weight:600}footer{background:#080b0d;color:#899397;padding:34px 0;font-size:12px}.foot{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap}.foot strong{font-family:'Barlow Condensed';font-size:18px;color:#fff}.foot-links{display:flex;gap:20px;flex-wrap:wrap}@media(max-width:850px){.wrap{width:min(100% - 36px,var(--max))}.head{height:auto;min-height:76px;padding:18px 0;align-items:flex-start}.nav{gap:14px;flex-wrap:wrap;justify-content:flex-end}.nav .button{display:none}.download-row{grid-template-columns:1fr;gap:16px}.size{font-size:48px}.hero{padding:72px 0 58px}.downloads{padding:64px 0 90px}}@media(max-width:560px){.head{display:block}.brand{display:block;margin-bottom:14px}.nav{justify-content:flex-start}.hero h1{font-size:62px}}
+          </style></head><body><header><div class="wrap head"><a class="brand" href="./">LED-Trailer.com</a><nav class="nav"><a href="./#trailer">Trailer</a><a href="./#einsatz">Einsatzbereiche</a><a href="./#projekte">Projekte</a><a class="active" href="./downloads.html">Downloads</a><a class="button" href="./#kontakt">Verfügbarkeit anfragen</a></nav></div></header><main><section class="hero"><div class="wrap"><p class="label">Technische Unterlagen</p><h1>Downloads</h1><p>Technische Datenblätter unserer LED-Trailer – kompakt zusammengefasst für Planung, Produktion und Veranstaltungstechnik.</p></div></section><section class="downloads"><div class="wrap"><h2>Technische Datenblätter</h2><div class="download-row"><div class="size">144 m²</div><div class="meta"><strong>LED-Trailer 16,00 × 9,00 m</strong><span>P4 / 4,8 mm · 3.328 × 1.872 Pixel · PDF, 2 Seiten</span></div><a class="button pdf" href="./downloads/LED-Trailer_Datenblatt_144m2.pdf" download>PDF herunterladen</a></div><a class="back" href="./#trailer">Zurück zu den Trailern</a></div></section></main><footer><div class="wrap foot"><div>LED-Trailer.com · by <strong>pixelgold</strong></div><div class="foot-links"><span>Hohenloher Weg 44 · 33102 Paderborn</span><a href="mailto:kontakt@pixelgold.de">kontakt@pixelgold.de</a><a href="./impressum.html">Impressum</a><a href="./datenschutz.html">Datenschutz</a></div></div></footer></body></html>'''
+          (root/'downloads.html').write_text(downloads_html,encoding='utf-8')
+
+          index_path=root/'index.html'
+          html=index_path.read_text(encoding='utf-8')
+          if 'href="./downloads.html">Downloads</a>' not in html:
+              old='<a href="#projekte">Projekte</a><a class="button lime"'
+              new='<a href="#projekte">Projekte</a><a href="./downloads.html">Downloads</a><a class="button lime"'
+              if old not in html: raise SystemExit('Navigation anchor not found; index left unchanged')
+              html=html.replace(old,new,1)
+
+          start=html.find('<article class="product" data-size="144 m²">')
+          if start<0: raise SystemExit('144 m² article not found; index left unchanged')
+          end=html.find('</article>',start)
+          if end<0: raise SystemExit('144 m² article end not found; index left unchanged')
+          end+=len('</article>')
+          segment=html[start:end]
+          if 'Datenblatt (PDF)' not in segment:
+              old_detail='<p class="detail-copy">Auflösung, Ausfahrhöhe, Drehbereich und Datenblatt werden hier ergänzt.</p></div><a class="button product-cta" href="#kontakt">144 m² Trailer anfragen</a>'
+              new_detail='<p class="detail-copy">16,00 × 9,00 m Bildfläche · P4 / 4,8 mm · 3.328 × 1.872 Pixel · 360° drehbar. Das vollständige technische Datenblatt steht als PDF bereit.</p></div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="button product-cta" href="./downloads/LED-Trailer_Datenblatt_144m2.pdf" target="_blank" rel="noopener">Datenblatt (PDF)</a><a class="button product-cta" href="#kontakt">144 m² Trailer anfragen</a></div>'
+              if old_detail not in segment: raise SystemExit('144 m² detail block not found; index left unchanged')
+              segment=segment.replace(old_detail,new_detail,1)
+              html=html[:start]+segment+html[end:]
+          index_path.write_text(html,encoding='utf-8')
+          PY
+      - name: Commit scoped website changes and remove one-time workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html downloads.html downloads/LED-Trailer_Datenblatt_144m2.pdf
+          git rm .github/workflows/setup-downloads-once.yml
+          git commit -m "Add LED Trailer downloads and 144 m² datasheet"
+          git push origin main
