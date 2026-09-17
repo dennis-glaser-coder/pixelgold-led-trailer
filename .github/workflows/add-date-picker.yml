@@ -9,20 +9,21 @@ permissions:
 
 jobs:
   patch:
-    if: github.event.head_commit.message == 'Repair date email newlines'
+    if: github.event.head_commit.message == 'Repair literal date email newline'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Repair date picker submit handler
+      - name: Repair literal newline in submit handler
         run: |
           python - <<'PY'
           from pathlib import Path
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
-          start=s.index("inquiryForm.addEventListener('submit',e=>{")
-          end=s.index('\n</script>',start)
-          new_submit=r"""inquiryForm.addEventListener('submit',e=>{e.preventDefault();const place=document.querySelector('#place'),startDate=document.querySelector('#start-date'),endDate=document.querySelector('#end-date');if(!place.reportValidity()||!startDate.reportValidity())return;if(endDate.value&&endDate.value<startDate.value){endDate.setCustomValidity('Das Enddatum darf nicht vor dem Startdatum liegen.');endDate.reportValidity();return}else endDate.setCustomValidity('');saveDraft();const f=new FormData(inquiryForm);const formatDate=value=>{if(!value)return'';const [y,m,d]=value.split('-');return d+'.'+m+'.'+y};const startText=formatDate(f.get('startDate')),endText=formatDate(f.get('endDate'));const periodText=endText&&endText!==startText?startText+' – '+endText:startText;const body=['Guten Tag,','','ich möchte einen LED-Trailer anfragen.','','Firma: '+f.get('company'),'Ansprechpartner: '+f.get('contactName'),'E-Mail: '+f.get('email'),'Telefon: '+f.get('phone'),'Veranstaltungsort: '+f.get('place'),'Datum / Zeitraum: '+periodText,'Bildfläche: '+(selectedSize||'nicht ausgewählt')].join('\n');window.location.href='mailto:kontakt@pixelgold.de?subject='+encodeURIComponent('LED-Trailer Anfrage · '+periodText)+'&body='+encodeURIComponent(body)});"""
-          s=s[:start]+new_submit+s[end:]
+          old = "].join('" + chr(92) + "\n" + "');"
+          new = "].join('" + chr(92) + "n" + "');"
+          if old not in s:
+              raise SystemExit('broken newline sequence not found')
+          s=s.replace(old,new,1)
           p.write_text(s,encoding='utf-8')
           PY
       - name: Commit change
