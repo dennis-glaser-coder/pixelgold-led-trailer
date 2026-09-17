@@ -1,0 +1,85 @@
+name: Create blank data sheets
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  build:
+    if: github.event.head_commit.message == 'Create blank data sheets'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PDF tooling
+        run: pip install pymupdf
+      - name: Create neutral PDFs
+        run: |
+          python - <<'PY'
+          import fitz
+          from pathlib import Path
+
+          src_dir = Path('downloads')
+          out_dir = Path('blanko-output')
+          out_dir.mkdir(exist_ok=True)
+
+          sizes = ['28m2','91m2','117m2','144m2']
+          targets = ['LED-TRAILER.COM', 'LED-Trailer.com']
+          dark = (8/255, 11/255, 13/255)
+          white = (1, 1, 1)
+
+          for size in sizes:
+              src = src_dir / f'LED-Trailer_Datenblatt_{size}.pdf'
+              out = out_dir / f'Datenblatt_{size}_Blanko.pdf'
+              doc = fitz.open(src)
+              for page in doc:
+                  for text in targets:
+                      for rect in page.search_for(text):
+                          # Top branding sits in the dark header; footer branding is on white.
+                          fill = dark if rect.y0 < 90 else white
+                          pad = 1.5
+                          r = fitz.Rect(rect.x0-pad, rect.y0-pad, rect.x1+pad, rect.y1+pad)
+                          page.add_redact_annot(r, fill=fill)
+                  page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE,
+                                        graphics=fitz.PDF_REDACT_LINE_ART_NONE,
+                                        text=fitz.PDF_REDACT_TEXT_REMOVE)
+              # Remove identifying document metadata as well.
+              doc.set_metadata({
+                  'title':'', 'author':'', 'subject':'', 'keywords':'',
+                  'creator':'', 'producer':'', 'creationDate':'', 'modDate':''
+              })
+              doc.save(out, garbage=4, deflate=True, clean=True)
+              doc.close()
+              print('created', out)
+          PY
+      - name: Verify visible branding is gone
+        run: |
+          python - <<'PY'
+          import fitz
+          from pathlib import Path
+          bad = []
+          for p in Path('blanko-output').glob('*.pdf'):
+              d = fitz.open(p)
+              text = '\n'.join(page.get_text() for page in d)
+              d.close()
+              if 'LED-TRAILER.COM' in text or 'LED-Trailer.com' in text or 'pixelgold' in text.lower():
+                  bad.append(str(p))
+          if bad:
+              raise SystemExit('Branding still found in: ' + ', '.join(bad))
+          print('verification passed')
+          PY
+      - name: Upload blank PDFs
+        uses: actions/upload-artifact@v4
+        with:
+          name: LED-Trailer-Blanko-Datenblaetter
+          path: blanko-output/*.pdf
+          if-no-files-found: error
+          retention-days: 7
