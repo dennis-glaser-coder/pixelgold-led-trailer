@@ -1,0 +1,45 @@
+name: Add three wheels to large trailers
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Add three wheels to large trailers'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add third wheel to 91 117 and 144
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          desktop_old = '.screen-box:before{content:"";position:absolute;left:-8px;right:-28px;bottom:-13px;height:16px;border-top:3px solid #111619;background:radial-gradient(circle at 34% 8px,#f7f7f5 0 3px,#111619 3.5px 7px,transparent 7.5px),radial-gradient(circle at 51% 8px,#f7f7f5 0 3px,#111619 3.5px 7px,transparent 7.5px)}'
+          desktop_new = desktop_old + '.product[data-size="91 m²"] .screen-box:before,.product[data-size="117 m²"] .screen-box:before,.product[data-size="144 m²"] .screen-box:before{background:radial-gradient(circle at 29% 8px,#f7f7f5 0 3px,#111619 3.5px 7px,transparent 7.5px),radial-gradient(circle at 44% 8px,#f7f7f5 0 3px,#111619 3.5px 7px,transparent 7.5px),radial-gradient(circle at 59% 8px,#f7f7f5 0 3px,#111619 3.5px 7px,transparent 7.5px)}'
+
+          mobile_old = '.screen-box:before{left:-6px;right:-6px;bottom:-10px;height:12px;border-top:1.25px solid #252b2f;background:radial-gradient(circle at 36% 7px,#f7f7f5 0 2.5px,#252b2f 3px 5.5px,transparent 6px),radial-gradient(circle at 52% 7px,#f7f7f5 0 2.5px,#252b2f 3px 5.5px,transparent 6px)}'
+          mobile_new = mobile_old + '.product[data-size="91 m²"] .screen-box:before,.product[data-size="117 m²"] .screen-box:before,.product[data-size="144 m²"] .screen-box:before{background:radial-gradient(circle at 31% 7px,#f7f7f5 0 2.5px,#252b2f 3px 5.5px,transparent 6px),radial-gradient(circle at 46% 7px,#f7f7f5 0 2.5px,#252b2f 3px 5.5px,transparent 6px),radial-gradient(circle at 61% 7px,#f7f7f5 0 2.5px,#252b2f 3px 5.5px,transparent 6px)}'
+
+          if desktop_old not in s:
+              raise SystemExit('Desktop wheel rule not found')
+          if mobile_old not in s:
+              raise SystemExit('Mobile wheel rule not found')
+
+          s = s.replace(desktop_old, desktop_new, 1)
+          s = s.replace(mobile_old, mobile_new, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Use three wheels on large trailers"
+          git push
