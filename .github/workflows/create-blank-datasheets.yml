@@ -43,7 +43,6 @@ jobs:
               for page in doc:
                   for text in targets:
                       for rect in page.search_for(text):
-                          # Top branding sits in the dark header; footer branding is on white.
                           fill = dark if rect.y0 < 90 else white
                           pad = 1.5
                           r = fitz.Rect(rect.x0-pad, rect.y0-pad, rect.x1+pad, rect.y1+pad)
@@ -51,7 +50,6 @@ jobs:
                   page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE,
                                         graphics=fitz.PDF_REDACT_LINE_ART_NONE,
                                         text=fitz.PDF_REDACT_TEXT_REMOVE)
-              # Remove identifying document metadata as well.
               doc.set_metadata({
                   'title':'', 'author':'', 'subject':'', 'keywords':'',
                   'creator':'', 'producer':'', 'creationDate':'', 'modDate':''
@@ -60,7 +58,7 @@ jobs:
               doc.close()
               print('created', out)
           PY
-      - name: Verify visible branding is gone
+      - name: Verify branding is gone
         run: |
           python - <<'PY'
           import fitz
@@ -70,7 +68,8 @@ jobs:
               d = fitz.open(p)
               text = '\n'.join(page.get_text() for page in d)
               d.close()
-              if 'LED-TRAILER.COM' in text or 'LED-Trailer.com' in text or 'pixelgold' in text.lower():
+              tokens = ['LED-TRAILER.COM', 'LED-Trailer.com', 'pixelgold', 'kontakt@pixelgold.de']
+              if any(t.lower() in text.lower() for t in tokens):
                   bad.append(str(p))
           if bad:
               raise SystemExit('Branding still found in: ' + ', '.join(bad))
