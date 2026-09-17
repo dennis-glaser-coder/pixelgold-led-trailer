@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   patch:
-    if: github.event.head_commit.message == 'Add native date picker'
+    if: github.event.head_commit.message == 'Fix native date picker'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,10 +45,10 @@ jobs:
           if old_restore not in s: raise SystemExit('restore target not found')
           s=s.replace(old_restore,new_restore,1)
 
-          old_submit="inquiryForm.addEventListener('submit',e=>{e.preventDefault();const place=document.querySelector('#place'),period=document.querySelector('#period');if(!place.reportValidity()||!period.reportValidity())return;saveDraft();const f=new FormData(inquiryForm);const body=['Guten Tag,','','ich möchte einen LED-Trailer anfragen.','','Firma: '+f.get('company'),'Ansprechpartner: '+f.get('contactName'),'E-Mail: '+f.get('email'),'Telefon: '+f.get('phone'),'Veranstaltungsort: '+f.get('place'),'Datum / Zeitraum: '+f.get('period'),'Bildfläche: '+(selectedSize||'nicht ausgewählt')].join('\\\n');window.location.href='mailto:kontakt@pixelgold.de?subject='+encodeURIComponent('LED-Trailer Anfrage · '+f.get('period'))+'&body='+encodeURIComponent(body)});"
-          new_submit="inquiryForm.addEventListener('submit',e=>{e.preventDefault();const place=document.querySelector('#place'),startDate=document.querySelector('#start-date'),endDate=document.querySelector('#end-date');if(!place.reportValidity()||!startDate.reportValidity())return;if(endDate.value&&endDate.value<startDate.value){endDate.setCustomValidity('Das Enddatum darf nicht vor dem Startdatum liegen.');endDate.reportValidity();return}else endDate.setCustomValidity('');saveDraft();const f=new FormData(inquiryForm);const formatDate=value=>{if(!value)return'';const [y,m,d]=value.split('-');return d+'.'+m+'.'+y};const startText=formatDate(f.get('startDate')),endText=formatDate(f.get('endDate'));const periodText=endText&&endText!==startText?startText+' – '+endText:startText;const body=['Guten Tag,','','ich möchte einen LED-Trailer anfragen.','','Firma: '+f.get('company'),'Ansprechpartner: '+f.get('contactName'),'E-Mail: '+f.get('email'),'Telefon: '+f.get('phone'),'Veranstaltungsort: '+f.get('place'),'Datum / Zeitraum: '+periodText,'Bildfläche: '+(selectedSize||'nicht ausgewählt')].join('\\\n');window.location.href='mailto:kontakt@pixelgold.de?subject='+encodeURIComponent('LED-Trailer Anfrage · '+periodText)+'&body='+encodeURIComponent(body)});"
-          if old_submit not in s: raise SystemExit('submit target not found')
-          s=s.replace(old_submit,new_submit,1)
+          start=s.index("inquiryForm.addEventListener('submit',e=>{")
+          end=s.index('\n</script>',start)
+          new_submit="inquiryForm.addEventListener('submit',e=>{e.preventDefault();const place=document.querySelector('#place'),startDate=document.querySelector('#start-date'),endDate=document.querySelector('#end-date');if(!place.reportValidity()||!startDate.reportValidity())return;if(endDate.value&&endDate.value<startDate.value){endDate.setCustomValidity('Das Enddatum darf nicht vor dem Startdatum liegen.');endDate.reportValidity();return}else endDate.setCustomValidity('');saveDraft();const f=new FormData(inquiryForm);const formatDate=value=>{if(!value)return'';const [y,m,d]=value.split('-');return d+'.'+m+'.'+y};const startText=formatDate(f.get('startDate')),endText=formatDate(f.get('endDate'));const periodText=endText&&endText!==startText?startText+' – '+endText:startText;const body=['Guten Tag,','','ich möchte einen LED-Trailer anfragen.','','Firma: '+f.get('company'),'Ansprechpartner: '+f.get('contactName'),'E-Mail: '+f.get('email'),'Telefon: '+f.get('phone'),'Veranstaltungsort: '+f.get('place'),'Datum / Zeitraum: '+periodText,'Bildfläche: '+(selectedSize||'nicht ausgewählt')].join('\\n');window.location.href='mailto:kontakt@pixelgold.de?subject='+encodeURIComponent('LED-Trailer Anfrage · '+periodText)+'&body='+encodeURIComponent(body)});"
+          s=s[:start]+new_submit+s[end:]
 
           p.write_text(s,encoding='utf-8')
           PY
