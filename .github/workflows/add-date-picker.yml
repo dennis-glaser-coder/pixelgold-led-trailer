@@ -1,4 +1,4 @@
-name: Add native date picker
+name: Repair date picker email formatting
 
 on:
   push:
@@ -9,47 +9,20 @@ permissions:
 
 jobs:
   patch:
-    if: github.event.head_commit.message == 'Fix native date picker'
+    if: github.event.head_commit.message == 'Repair date email newlines'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Add selectable event dates
+      - name: Repair date picker submit handler
         run: |
           python - <<'PY'
           from pathlib import Path
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
-
-          old_html='<div class="field"><label for="period">Datum / Zeitraum</label><input id="period" name="period" placeholder="z. B. 12.–14. Juni 2027" required maxlength="150"></div>'
-          new_html='<div class="field"><label>Datum / Zeitraum</label><div class="date-range"><div><span class="date-sub">Von</span><input id="start-date" type="date" name="startDate" required aria-label="Startdatum"></div><div><span class="date-sub">Bis <small>(optional)</small></span><input id="end-date" type="date" name="endDate" aria-label="Enddatum"></div></div></div>'
-          if old_html not in s: raise SystemExit('date field target not found')
-          s=s.replace(old_html,new_html,1)
-
-          old_css='.field label{font-size:12px;color:#d4dcdf}input,select,textarea{width:100%;min-height:51px;border:1px solid #455157;background:#0d1316;color:#fff;border-radius:0;padding:13px 14px;font-size:16px}'
-          new_css='.field label{font-size:12px;color:#d4dcdf}.date-range{display:grid;grid-template-columns:1fr 1fr;gap:10px}.date-sub{display:block;font-size:11px;color:#8f9a9f;margin:0 0 6px}.date-sub small{font-size:10px}.date-range input[type="date"]{color-scheme:dark;min-width:0}input,select,textarea{width:100%;min-height:51px;border:1px solid #455157;background:#0d1316;color:#fff;border-radius:0;padding:13px 14px;font-size:16px}'
-          if old_css not in s: raise SystemExit('date css target not found')
-          s=s.replace(old_css,new_css,1)
-
-          old_mobile='.form-grid{grid-template-columns:1fr}.field.wide,.form-actions{grid-column:auto}.form-actions{flex-direction:column-reverse}'
-          new_mobile='.form-grid{grid-template-columns:1fr}.date-range{grid-template-columns:1fr 1fr}.field.wide,.form-actions{grid-column:auto}.form-actions{flex-direction:column-reverse}'
-          if old_mobile not in s: raise SystemExit('mobile target not found')
-          s=s.replace(old_mobile,new_mobile,1)
-
-          old_draft="const draftFields=['company','contact-name','email','phone','place','period'];"
-          new_draft="const draftFields=['company','contact-name','email','phone','place','start-date','end-date'];"
-          if old_draft not in s: raise SystemExit('draft target not found')
-          s=s.replace(old_draft,new_draft,1)
-
-          old_restore="restoreDraft();nextButton.addEventListener('click'"
-          new_restore="restoreDraft();const startDateInput=document.querySelector('#start-date'),endDateInput=document.querySelector('#end-date');const today=new Date(),todayIso=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');startDateInput.min=todayIso;function syncEndDate(){endDateInput.min=startDateInput.value||todayIso;if(endDateInput.value&&startDateInput.value&&endDateInput.value<startDateInput.value)endDateInput.value=''}startDateInput.addEventListener('change',syncEndDate);syncEndDate();nextButton.addEventListener('click'"
-          if old_restore not in s: raise SystemExit('restore target not found')
-          s=s.replace(old_restore,new_restore,1)
-
           start=s.index("inquiryForm.addEventListener('submit',e=>{")
           end=s.index('\n</script>',start)
-          new_submit="inquiryForm.addEventListener('submit',e=>{e.preventDefault();const place=document.querySelector('#place'),startDate=document.querySelector('#start-date'),endDate=document.querySelector('#end-date');if(!place.reportValidity()||!startDate.reportValidity())return;if(endDate.value&&endDate.value<startDate.value){endDate.setCustomValidity('Das Enddatum darf nicht vor dem Startdatum liegen.');endDate.reportValidity();return}else endDate.setCustomValidity('');saveDraft();const f=new FormData(inquiryForm);const formatDate=value=>{if(!value)return'';const [y,m,d]=value.split('-');return d+'.'+m+'.'+y};const startText=formatDate(f.get('startDate')),endText=formatDate(f.get('endDate'));const periodText=endText&&endText!==startText?startText+' – '+endText:startText;const body=['Guten Tag,','','ich möchte einen LED-Trailer anfragen.','','Firma: '+f.get('company'),'Ansprechpartner: '+f.get('contactName'),'E-Mail: '+f.get('email'),'Telefon: '+f.get('phone'),'Veranstaltungsort: '+f.get('place'),'Datum / Zeitraum: '+periodText,'Bildfläche: '+(selectedSize||'nicht ausgewählt')].join('\\n');window.location.href='mailto:kontakt@pixelgold.de?subject='+encodeURIComponent('LED-Trailer Anfrage · '+periodText)+'&body='+encodeURIComponent(body)});"
+          new_submit=r"""inquiryForm.addEventListener('submit',e=>{e.preventDefault();const place=document.querySelector('#place'),startDate=document.querySelector('#start-date'),endDate=document.querySelector('#end-date');if(!place.reportValidity()||!startDate.reportValidity())return;if(endDate.value&&endDate.value<startDate.value){endDate.setCustomValidity('Das Enddatum darf nicht vor dem Startdatum liegen.');endDate.reportValidity();return}else endDate.setCustomValidity('');saveDraft();const f=new FormData(inquiryForm);const formatDate=value=>{if(!value)return'';const [y,m,d]=value.split('-');return d+'.'+m+'.'+y};const startText=formatDate(f.get('startDate')),endText=formatDate(f.get('endDate'));const periodText=endText&&endText!==startText?startText+' – '+endText:startText;const body=['Guten Tag,','','ich möchte einen LED-Trailer anfragen.','','Firma: '+f.get('company'),'Ansprechpartner: '+f.get('contactName'),'E-Mail: '+f.get('email'),'Telefon: '+f.get('phone'),'Veranstaltungsort: '+f.get('place'),'Datum / Zeitraum: '+periodText,'Bildfläche: '+(selectedSize||'nicht ausgewählt')].join('\n');window.location.href='mailto:kontakt@pixelgold.de?subject='+encodeURIComponent('LED-Trailer Anfrage · '+periodText)+'&body='+encodeURIComponent(body)});"""
           s=s[:start]+new_submit+s[end:]
-
           p.write_text(s,encoding='utf-8')
           PY
       - name: Commit change
@@ -58,5 +31,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m "Add selectable event dates"
+          git commit -m "Repair date picker email formatting"
           git push
