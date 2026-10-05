@@ -50,6 +50,29 @@ if (!sitemap.includes(`<loc>${ORIGIN}/</loc>`)) {
   fail('sitemap must contain the production homepage URL');
 }
 
+const requiredUrls = [
+  `${ORIGIN}/public-viewing.html`,
+  `${ORIGIN}/sportevents.html`,
+  `${ORIGIN}/firmenveranstaltungen.html`,
+  `${ORIGIN}/messe-roadshow.html`,
+  `${ORIGIN}/projekte.html`,
+  `${ORIGIN}/downloads.html`,
+];
+
+for (const url of requiredUrls) {
+  if (!sitemap.includes(`<loc>${url}</loc>`)) {
+    fail(`sitemap missing ${url}`);
+  }
+  const file = url.replace(`${ORIGIN}/`, '');
+  const html = read(file);
+  if (!html.includes('<meta name="robots" content="index,follow">')) {
+    fail(`${file} must explicitly contain robots index,follow`);
+  }
+  if (!html.includes(`<link rel="canonical" href="${url}">`)) {
+    fail(`${file} canonical must be ${url}`);
+  }
+}
+
 const publicSeoFiles = [index, robots, sitemap, cname].join('\n');
 if (/github\.io/i.test(publicSeoFiles)) {
   fail('public SEO files contain a github.io host');
